@@ -3,9 +3,24 @@ package siliconflow
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"ai-js-anti-obfuscation/core/config"
 )
+
+// cleanOutput 清理输出内容，移除可能的代码块标记
+func cleanOutput(output string) string {
+	// 移除开头的 ```javascript 或 ```js
+	output = strings.TrimPrefix(output, "```javascript")
+	output = strings.TrimPrefix(output, "```js")
+	output = strings.TrimPrefix(output, "```")
+
+	// 移除结尾的 ```
+	output = strings.TrimSuffix(output, "```")
+
+	// 清理首尾的空白字符
+	return strings.TrimSpace(output)
+}
 
 // RunDeobfuscate 执行反混淆的主要逻辑
 func RunDeobfuscate(inputFile, outputFile string) error {
@@ -39,8 +54,11 @@ func RunDeobfuscate(inputFile, outputFile string) error {
 
 	deobfuscated, err := client.Deobfuscate(string(inputCode))
 	if err != nil {
-		return err // 直接返回错误，不包装
+		return err
 	}
+
+	// 清理输出内容
+	deobfuscated = cleanOutput(deobfuscated)
 
 	// 写入输出文件
 	if err := os.WriteFile(outputFile, []byte(deobfuscated), 0644); err != nil {

@@ -21,6 +21,32 @@ var rootCmd = &cobra.Command{
 	Short: "AI JavaScript Anti-obfuscation Tool",
 	Long:  `A tool to deobfuscate JavaScript code using AI`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// 加载配置文件
+		fileConfig, err := config.LoadConfig()
+		if err != nil {
+			return fmt.Errorf("failed to load config: %v", err)
+		}
+
+		// 只有当命令行参数没有设置时，才使用配置文件中的值
+		if cmd.Flags().Changed("model") == false && fileConfig.Model != "" {
+			cfg.Model = fileConfig.Model
+		}
+		if cmd.Flags().Changed("max-tokens") == false && fileConfig.MaxTokens != 0 {
+			cfg.MaxTokens = fileConfig.MaxTokens
+		}
+		if cmd.Flags().Changed("temperature") == false && fileConfig.Temperature != 0 {
+			cfg.Temperature = fileConfig.Temperature
+		}
+		if cmd.Flags().Changed("top-p") == false && fileConfig.TopP != 0 {
+			cfg.TopP = fileConfig.TopP
+		}
+		if cmd.Flags().Changed("top-k") == false && fileConfig.TopK != 0 {
+			cfg.TopK = fileConfig.TopK
+		}
+		if cmd.Flags().Changed("frequency-penalty") == false && fileConfig.FrequencyPenalty != 0 {
+			cfg.FrequencyPenalty = fileConfig.FrequencyPenalty
+		}
+
 		// 验证输入文件存在
 		if _, err := os.Stat(cfg.InputFile); os.IsNotExist(err) {
 			// 文件不存在属于用法错误，应该显示使用说明
@@ -63,6 +89,14 @@ func init() {
 	// 必需参数
 	rootCmd.Flags().StringVarP(&cfg.InputFile, "input", "i", "", "Input file path")
 	rootCmd.Flags().StringVarP(&cfg.OutputFile, "output", "o", "", "Output file path (optional, defaults to input_output.js)")
+
+	// 模型参数
+	rootCmd.Flags().StringVar(&cfg.Model, "model", cfg.Model, "Model name")
+	rootCmd.Flags().IntVar(&cfg.MaxTokens, "max-tokens", cfg.MaxTokens, "Maximum number of tokens to generate")
+	rootCmd.Flags().Float64Var(&cfg.Temperature, "temperature", cfg.Temperature, "Sampling temperature (0.0-1.0)")
+	rootCmd.Flags().Float64Var(&cfg.TopP, "top-p", cfg.TopP, "Top-p sampling parameter")
+	rootCmd.Flags().IntVar(&cfg.TopK, "top-k", cfg.TopK, "Top-k sampling parameter")
+	rootCmd.Flags().Float64Var(&cfg.FrequencyPenalty, "frequency-penalty", cfg.FrequencyPenalty, "Frequency penalty parameter")
 
 	// 只标记输入文件为必需参数
 	rootCmd.MarkFlagRequired("input")
