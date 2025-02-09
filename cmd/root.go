@@ -72,7 +72,7 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 运行时错误不显示使用说明
 		cmd.SilenceUsage = true
-		return siliconflow.RunDeobfuscate(cfg.InputFile, cfg.OutputFile)
+		return siliconflow.RunDeobfuscate(cfg.InputFile, cfg.OutputFile, cfg)
 	},
 	// 禁用错误追踪
 	SilenceErrors: true,

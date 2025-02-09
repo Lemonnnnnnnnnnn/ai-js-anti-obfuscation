@@ -23,21 +23,37 @@ func cleanOutput(output string) string {
 }
 
 // RunDeobfuscate 执行反混淆的主要逻辑
-func RunDeobfuscate(inputFile, outputFile string) error {
-	// 加载配置
-	c, err := config.LoadConfig()
+func RunDeobfuscate(inputFile, outputFile string, cliConfig *config.Config) error {
+	// 加载配置文件
+	fileConfig, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("error loading config: %w", err)
 	}
 
-	// 检查 API key
-	if c.SiliconFlowAPIKey == "" {
-		fmt.Print("Please enter your SiliconFlow API key: ")
-		var apiKey string
-		fmt.Scanln(&apiKey)
-		c.SiliconFlowAPIKey = apiKey
+	// 创建默认配置
+	defaultConfig := config.New()
 
-		if err := config.SaveConfig(c); err != nil {
+	// 按优先级合并配置：命令行 > 配置文件 > 默认值
+	finalConfig := &DeobfuscateConfig{
+		// 如果命令行参数非空则使用命令行参数，否则使用配置文件参数，如果配置文件也为空则使用默认值
+		Model:            getConfigValue(cliConfig.Model, fileConfig.Model, defaultConfig.Model),
+		MaxTokens:        getConfigIntValue(cliConfig.MaxTokens, fileConfig.MaxTokens, defaultConfig.MaxTokens),
+		Temperature:      getConfigFloatValue(cliConfig.Temperature, fileConfig.Temperature, defaultConfig.Temperature),
+		TopP:             getConfigFloatValue(cliConfig.TopP, fileConfig.TopP, defaultConfig.TopP),
+		TopK:             getConfigIntValue(cliConfig.TopK, fileConfig.TopK, defaultConfig.TopK),
+		FrequencyPenalty: getConfigFloatValue(cliConfig.FrequencyPenalty, fileConfig.FrequencyPenalty, defaultConfig.FrequencyPenalty),
+	}
+
+	// 检查 API key
+	apiKey := cliConfig.SiliconFlowAPIKey
+	if apiKey == "" {
+		apiKey = fileConfig.SiliconFlowAPIKey
+	}
+	if apiKey == "" {
+		fmt.Print("Please enter your SiliconFlow API key: ")
+		fmt.Scanln(&apiKey)
+		fileConfig.SiliconFlowAPIKey = apiKey
+		if err := config.SaveConfig(fileConfig); err != nil {
 			return fmt.Errorf("error saving config: %w", err)
 		}
 	}
@@ -49,7 +65,7 @@ func RunDeobfuscate(inputFile, outputFile string) error {
 	}
 
 	// 创建客户端并执行反混淆
-	client := NewClient(c.SiliconFlowAPIKey)
+	client := NewClient(apiKey, finalConfig)
 	fmt.Println("Deobfuscating code...")
 
 	deobfuscated, err := client.Deobfuscate(string(inputCode))
@@ -67,4 +83,37 @@ func RunDeobfuscate(inputFile, outputFile string) error {
 
 	fmt.Printf("Successfully deobfuscated code and saved to: %s\n", outputFile)
 	return nil
+}
+
+// 辅助函数：获取字符串配置值
+func getConfigValue(cli, file, defaultVal string) string {
+	if cli != "" {
+		return cli
+	}
+	if file != "" {
+		return file
+	}
+	return defaultVal
+}
+
+// 辅助函数：获取整数配置值
+func getConfigIntValue(cli, file, defaultVal int) int {
+	if cli != 0 {
+		return cli
+	}
+	if file != 0 {
+		return file
+	}
+	return defaultVal
+}
+
+// 辅助函数：获取浮点数配置值
+func getConfigFloatValue(cli, file, defaultVal float64) float64 {
+	if cli != 0 {
+		return cli
+	}
+	if file != 0 {
+		return file
+	}
+	return defaultVal
 }

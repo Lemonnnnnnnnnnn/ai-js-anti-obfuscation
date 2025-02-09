@@ -43,11 +43,22 @@ type APIResponse struct {
 
 type Client struct {
 	apiKey string
+	config *DeobfuscateConfig
 }
 
-func NewClient(apiKey string) *Client {
+type DeobfuscateConfig struct {
+	Model            string
+	MaxTokens        int
+	Temperature      float64
+	TopP             float64
+	TopK             int
+	FrequencyPenalty float64
+}
+
+func NewClient(apiKey string, config *DeobfuscateConfig) *Client {
 	return &Client{
 		apiKey: apiKey,
+		config: config,
 	}
 }
 
@@ -118,7 +129,7 @@ func (c *Client) Chat(req *ChatRequest) (string, error) {
 
 func (c *Client) Deobfuscate(code string) (string, error) {
 	req := &ChatRequest{
-		Model: "Qwen/Qwen2.5-Coder-32B-Instruct",
+		Model: c.config.Model,
 		Messages: []ChatMessage{
 			{
 				Role:    "user",
@@ -126,11 +137,11 @@ func (c *Client) Deobfuscate(code string) (string, error) {
 			},
 		},
 		Stream:           false,
-		MaxTokens:        4096, // 增加 token 限制以处理较长的代码
-		Temperature:      0.2,  // 降低温度以获得更稳定的输出
-		TopP:             0.9,
-		TopK:             50,
-		FrequencyPenalty: 0.0, // 降低重复惩罚以保持变量名一致性
+		MaxTokens:        c.config.MaxTokens,
+		Temperature:      c.config.Temperature,
+		TopP:             c.config.TopP,
+		TopK:             c.config.TopK,
+		FrequencyPenalty: c.config.FrequencyPenalty,
 		N:                1,
 	}
 
